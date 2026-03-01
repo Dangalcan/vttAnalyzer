@@ -68,6 +68,7 @@ docker run -p 3000:3000 --env-file .env vtt-analyzer
 ```
 
 ## 📄 License
+
 This project is for educational/demonstration purposes.
 
 ---
