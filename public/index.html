@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VTT Analyzer - Conversation Insights</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>VTT Analyzer</h1>
+            <p>Upload your WebVTT file to extract deep conversation insights.</p>
+        </header>
+
+        <main>
+            <section class="upload-section">
+                <div class="drop-zone" id="drop-zone">
+                    <span class="drop-zone__prompt">Drop VTT file here or click to upload</span>
+                    <input type="file" name="vttFile" id="vtt-input" class="drop-zone__input" accept=".vtt">
+                </div>
+                <button id="analyze-btn" class="btn-primary" disabled>Analyze Conversation</button>
+            </section>
+
+            <section id="results" class="results-section hidden">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-label">Total Time</span>
+                        <div class="stat-value"><span id="total-time-min">0</span> min</div>
+                        <div class="stat-sub"><span id="total-time-sec">0</span> seconds</div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Participants</span>
+                        <div class="stat-value" id="participant-count">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Total Messages</span>
+                        <div class="stat-value" id="total-messages">0</div>
+                    </div>
+                </div>
+
+                <div class="participants-section">
+                    <h2>Participants Breakdown</h2>
+                    <div id="participants-list" class="participants-grid">
+                        <!-- Participant cards will be injected here -->
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2026 VTT Analyzer. Daniel Galván Cancio.</p>
+        </footer>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
