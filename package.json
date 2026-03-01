@@ -1,0 +1,20 @@
+{
+  "name": "vttanalyzer",
+  "version": "1.0.0",
+  "author": "Daniel Galván Cancio",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest run",
+    "start": "node server.js"
+  },
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.2.1",
+    "he": "^1.2.0",
+    "multer": "^2.1.0"
+  },
+  "devDependencies": {
+    "vitest": "^4.0.18"
+  }
+}
