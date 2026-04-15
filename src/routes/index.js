@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { analyzeVTT } from '../controllers/AnalyzeController.js';
+import { analyzeVTT, analyzeZip } from '../controllers/AnalyzeController.js';
 
 const router = express.Router();
 
@@ -14,5 +14,8 @@ const upload = multer({ storage: storage });
 
 // POST /api/analyze - Uploads and analyzes a VTT file
 router.post('/analyze', upload.single('vttFile'), analyzeVTT);
+
+// POST /api/analyze-zip - Uploads and analyzes a ZIP of VTT files
+router.post('/analyze-zip', upload.single('vttFile'), analyzeZip);
 
 export default router;

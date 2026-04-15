@@ -10,12 +10,14 @@
   },
   "type": "module",
   "dependencies": {
+    "adm-zip": "^0.5.17",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "he": "^1.2.0",
     "multer": "^2.1.0"
   },
   "devDependencies": {
+    "supertest": "^7.2.2",
     "vitest": "^4.0.18"
   }
 }

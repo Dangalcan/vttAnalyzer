@@ -35,8 +35,9 @@ dropZone.addEventListener('drop', (e) => {
 });
 
 function handleFileSelect(file) {
-    if (!file.name.endsWith('.vtt')) {
-        alert('Please select a .vtt file');
+    const name = file.name.toLowerCase();
+    if (!name.endsWith('.vtt') && !name.endsWith('.zip')) {
+        alert('Please select a .vtt or .zip file');
         return;
     }
     selectedFile = file;
@@ -54,16 +55,43 @@ analyzeBtn.addEventListener('click', async () => {
     const formData = new FormData();
     formData.append('vttFile', selectedFile);
 
+    const isZip = selectedFile.name.toLowerCase().endsWith('.zip');
+    const endpoint = isZip ? '/api/analyze-zip' : '/api/analyze';
+
     try {
-        const response = await fetch('/api/analyze', {
+        const response = await fetch(endpoint, {
             method: 'POST',
             body: formData
         });
 
-        if (!response.ok) throw new Error('Failed to analyze VTT');
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({ error: 'Analysis failed' }));
+            throw new Error(errData.error || 'Failed to analyze file');
+        }
 
-        const stats = await response.json();
-        displayResults(stats);
+        if (isZip) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = 'analysis.csv';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            // Show a simple success message for batch
+            const list = document.getElementById('participants-list');
+            list.innerHTML = `<div class="participant-card" style="grid-column: 1/-1; text-align: center;">
+                <span class="participant-name">Batch Analysis Complete!</span>
+                <span class="participant-count">Your CSV file has been downloaded.</span>
+            </div>`;
+            resultsSection.classList.remove('hidden');
+        } else {
+            const stats = await response.json();
+            displayResults(stats);
+        }
     } catch (err) {
         alert(err.message);
     } finally {

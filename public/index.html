@@ -15,14 +15,14 @@
     <div class="container">
         <header>
             <h1>VTT Analyzer</h1>
-            <p>Upload your WebVTT file to extract deep conversation insights.</p>
+            <p>Upload your WebVTT file or a ZIP of VTTs for batch analysis.</p>
         </header>
 
         <main>
             <section class="upload-section">
                 <div class="drop-zone" id="drop-zone">
-                    <span class="drop-zone__prompt">Drop VTT file here or click to upload</span>
-                    <input type="file" name="vttFile" id="vtt-input" class="drop-zone__input" accept=".vtt">
+                    <span class="drop-zone__prompt">Drop VTT or ZIP file here or click to upload</span>
+                    <input type="file" name="vttFile" id="vtt-input" class="drop-zone__input" accept=".vtt,.zip">
                 </div>
                 <button id="analyze-btn" class="btn-primary" disabled>Analyze Conversation</button>
             </section>

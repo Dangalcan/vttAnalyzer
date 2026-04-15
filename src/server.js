@@ -17,10 +17,16 @@ app.use(express.json());
 // Serve static files from the root public directory
 app.use(express.static(path.join(__dirname, '../public')));
 
+import url from 'url';
+
 // Register API routes
 app.use('/api', apiRouter);
 
-// Start server
-app.listen(port, () => {
-    console.log(`VTT Analyzer server running at http://localhost:${port}`);
-});
+// Start server only if run directly
+if (import.meta.url === url.pathToFileURL(process.argv[1]).href) {
+    app.listen(port, () => {
+        console.log(`VTT Analyzer server running at http://localhost:${port}`);
+    });
+}
+
+export default app;
