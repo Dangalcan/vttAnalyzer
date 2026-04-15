@@ -1,10 +1,11 @@
 import { AnalyzeService } from '../services/AnalyzeService.js';
+import { calculateEqualityScore } from '../services/vttParser.js';
 import AdmZip from 'adm-zip';
 
 /**
  * Controller for analyzing VTT files.
  * Maps to the POST /api/analyze route.
- * 
+ *
  * @param {object} req - Express request object.
  * @param {object} res - Express response object.
  */
@@ -15,12 +16,15 @@ export function analyzeVTT(req, res) {
 
     try {
         const content = req.file.buffer.toString('utf-8');
-        const stats = AnalyzeService.analyzeContent(content);
-        
-        // Return JSON results directly
+        const filterNoise = req.body.filterNoise === 'true';
+        const stats = AnalyzeService.analyzeContent(content, { filterNoise });
+
         res.status(200).json(stats);
     } catch (err) {
         console.error('Error in AnalyzeController:', err);
+        if (err.message && err.message.startsWith('Invalid VTT format')) {
+            return res.status(400).json({ error: err.message });
+        }
         res.status(500).json({ error: 'Failed to analyze VTT file' });
     }
 }
@@ -28,7 +32,14 @@ export function analyzeVTT(req, res) {
 /**
  * Controller for analyzing ZIP files containing multiple VTTs.
  * Maps to the POST /api/analyze-zip route.
- * 
+ *
+ * Global equality score is computed by pooling all participant word counts
+ * and calling calculateEqualityScore once — averaging per-file Gini scores
+ * is statistically incorrect.
+ *
+ * Global WPM uses total speaking time (sum of per-file speakingSeconds) so
+ * long silences between sessions do not deflate the metric.
+ *
  * @param {object} req - Express request object.
  * @param {object} res - Express response object.
  */
@@ -38,34 +49,61 @@ export function analyzeZip(req, res) {
     }
 
     try {
+        const filterNoise = req.body.filterNoise === 'true';
         const zip = new AdmZip(req.file.buffer);
         const zipEntries = zip.getEntries();
         const results = [];
 
         let totalDurationSeconds = 0;
+        let totalSpeakingSeconds = 0;
         let totalMessages = 0;
+        let totalWords = 0;
+        let totalNoiseMessages = 0;
+        let totalBackchannels = 0;
+        let totalInterruptions = 0;
+        let globalNoiseBreakdown = { duration: 0, logistics: 0, backchannel: 0, other: 0 };
         let participantMap = new Map();
-        let sumMeanResponseTime = 0;
+        // Weighted mean: sum(mean_i * count_i) / sum(count_i) — statistically correct
+        let sumWeightedResponseTime = 0;
+        let totalResponseTimeCount = 0;
+        // Pool totals for noise ratio: totalNoise / totalMergedCues — statistically correct
+        let totalMergedCues = 0;
         let vttFileCount = 0;
 
         zipEntries.forEach(entry => {
             if (!entry.isDirectory && entry.entryName.toLowerCase().endsWith('.vtt')) {
                 const content = entry.getData().toString('utf-8');
-                const stats = AnalyzeService.analyzeContent(content);
-                
-                totalDurationSeconds += stats.durationSeconds;
-                totalMessages += stats.totalMessages;
-                sumMeanResponseTime += stats.meanResponseTimeSeconds;
+                const stats = AnalyzeService.analyzeContent(content, { filterNoise });
+
+                totalDurationSeconds      += stats.durationSeconds;
+                totalSpeakingSeconds      += stats.speakingSeconds || 0;
+                totalMessages             += stats.totalMessages;
+                totalWords                += stats.totalWords;
+                totalNoiseMessages        += stats.noiseMessagesCount;
+                totalBackchannels         += stats.backchannelCount;
+                totalInterruptions        += stats.interruptionCount;
+                totalMergedCues           += stats.mergedCuesCount  || 0;
+                sumWeightedResponseTime   += stats.meanResponseTimeSeconds * (stats.responseTimeCount || 0);
+                totalResponseTimeCount    += stats.responseTimeCount || 0;
                 vttFileCount++;
 
+                if (stats.noiseBreakdown) {
+                    globalNoiseBreakdown.duration   += stats.noiseBreakdown.duration   || 0;
+                    globalNoiseBreakdown.logistics  += stats.noiseBreakdown.logistics  || 0;
+                    globalNoiseBreakdown.backchannel+= stats.noiseBreakdown.backchannel|| 0;
+                    globalNoiseBreakdown.other      += stats.noiseBreakdown.other      || 0;
+                }
+
                 stats.participants.forEach(p => {
-                    participantMap.set(p.name, (participantMap.get(p.name) || 0) + p.count);
+                    const existing = participantMap.get(p.name) || { count: 0, words: 0, speakingSeconds: 0 };
+                    participantMap.set(p.name, {
+                        count:          existing.count          + p.count,
+                        words:          existing.words          + p.words,
+                        speakingSeconds: existing.speakingSeconds + (p.speakingSeconds || 0),
+                    });
                 });
 
-                results.push({
-                    filename: entry.name,
-                    ...stats
-                });
+                results.push({ filename: entry.name, ...stats });
             }
         });
 
@@ -73,22 +111,56 @@ export function analyzeZip(req, res) {
             return res.status(400).json({ error: 'No VTT files found in ZIP' });
         }
 
+        const durationMinutes   = Number((totalDurationSeconds / 60).toFixed(2));
+        const speakingMinutes   = totalSpeakingSeconds / 60;
+
+        // Single Gini pass over pooled participant word counts — statistically correct
+        const globalEqualityScore = calculateEqualityScore(
+            Array.from(participantMap.values()).map(d => d.words)
+        );
+
         const globalStats = {
-            durationSeconds: Number(totalDurationSeconds.toFixed(3)),
-            durationMinutes: Number((totalDurationSeconds / 60).toFixed(2)),
-            meanResponseTimeSeconds: vttFileCount > 0 ? Number((sumMeanResponseTime / vttFileCount).toFixed(2)) : 0,
-            participantCount: participantMap.size,
-            totalMessages: totalMessages,
+            durationSeconds:        Number(totalDurationSeconds.toFixed(3)),
+            durationMinutes,
+            speakingSeconds:        Number(totalSpeakingSeconds.toFixed(3)),
+            meanResponseTimeSeconds: totalResponseTimeCount > 0
+                ? Number((sumWeightedResponseTime / totalResponseTimeCount).toFixed(2))
+                : 0,
+            participantCount:       participantMap.size,
+            equalityScore:          globalEqualityScore,
+            totalMessages,
+            totalWords,
+            wpm: speakingMinutes > 0 ? Number((totalWords / speakingMinutes).toFixed(2)) : 0,
+            noiseMessagesCount:     totalNoiseMessages,
+            noiseBreakdown:         globalNoiseBreakdown,
+            backchannelCount:       totalBackchannels,
+            interruptionCount:      totalInterruptions,
+            noiseRatio: totalMergedCues > 0
+                ? Number(((totalNoiseMessages / totalMergedCues) * 100).toFixed(1))
+                : 0,
             participants: Array.from(participantMap.entries())
-                .map(([name, count]) => ({ name, count }))
-                .sort((a, b) => b.count - a.count)
+                .map(([name, data]) => ({
+                    name,
+                    count: data.count,
+                    words: data.words,
+                    speakingSeconds: Number(data.speakingSeconds.toFixed(3)),
+                    wpm: data.speakingSeconds > 0
+                        ? Number((data.words / (data.speakingSeconds / 60)).toFixed(2))
+                        : 0,
+                }))
+                .sort((a, b) => b.count - a.count),
         };
 
         // Generate CSV
-        const headers = ['filename', 'durationSeconds', 'durationMinutes', 'meanResponseTimeSeconds', 'participantCount', 'totalMessages', 'participants'];
+        const headers = [
+            'filename', 'durationSeconds', 'durationMinutes', 'meanResponseTimeSeconds',
+            'participantCount', 'totalMessages', 'totalWords', 'wpm',
+            'noiseMessagesCount', 'backchannelCount', 'interruptionCount', 'noiseRatio',
+            'participants',
+        ];
         const escapeCsv = (val) => {
             if (val === undefined || val === null) return '';
-            let str = String(val);
+            const str = String(val);
             if (str.includes(',') || str.includes('"') || str.includes('\n')) {
                 return `"${str.replace(/"/g, '""')}"`;
             }
@@ -98,7 +170,7 @@ export function analyzeZip(req, res) {
         const csvLines = [headers.join(',')];
         results.forEach(item => {
             const participantsStr = item.participants
-                ? item.participants.map(p => `${p.name} (${p.count})`).join('; ')
+                ? item.participants.map(p => `${p.name} (turns: ${p.count}, words: ${p.words})`).join('; ')
                 : '';
             const row = [
                 escapeCsv(item.filename),
@@ -107,17 +179,21 @@ export function analyzeZip(req, res) {
                 escapeCsv(item.meanResponseTimeSeconds),
                 escapeCsv(item.participantCount),
                 escapeCsv(item.totalMessages),
-                escapeCsv(participantsStr)
+                escapeCsv(item.totalWords),
+                escapeCsv(item.wpm),
+                escapeCsv(item.noiseMessagesCount),
+                escapeCsv(item.backchannelCount),
+                escapeCsv(item.interruptionCount),
+                escapeCsv(item.noiseRatio),
+                escapeCsv(participantsStr),
             ];
             csvLines.push(row.join(','));
         });
 
-        const csvString = csvLines.join('\n');
-
-        // Return JSON containing both CSV and the global statistics
         res.status(200).json({
-            csv: csvString,
-            globalStats
+            csv: csvLines.join('\n'),
+            globalStats,
+            results,
         });
     } catch (err) {
         console.error('Error in analyzeZip controller:', err);
