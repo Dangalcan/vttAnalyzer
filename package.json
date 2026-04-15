@@ -5,8 +5,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "vitest run",
-    "start": "node server.js"
+    "test": "vitest run src/tests",
+    "start": "node src/server.js"
   },
   "type": "module",
   "dependencies": {

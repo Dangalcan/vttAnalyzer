@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseVTT, calculateDuration } from '../vttParser.js';
+import { parseVTT, calculateDuration } from '../services/vttParser.js';
 
 describe('VTT Parser', () => {
   const sampleVtt = `WEBVTT
