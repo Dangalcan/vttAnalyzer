@@ -1,4 +1,4 @@
-const he = require('he');
+import he from 'he';
 
 /**
  * Calculates duration in seconds between two HH:MM:SS.mmm timestamps.
@@ -78,4 +78,4 @@ function parseVTT(content) {
     };
 }
 
-module.exports = { parseVTT, calculateDuration };
+export { parseVTT, calculateDuration };

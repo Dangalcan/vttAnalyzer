@@ -1,8 +1,10 @@
-require('dotenv').config();
-const express = require('express');
-const multer = require('multer');
-const he = require('he');
-const path = require('path');
+import dotenv from 'dotenv';
+dotenv.config();
+import express from 'express';
+import multer from 'multer';
+import he from 'he';
+import path from 'path';
+import { parseVTT } from './vttParser.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -13,7 +15,6 @@ const upload = multer({ storage: storage });
 
 app.use(express.static('public'));
 
-const { parseVTT } = require('./vttParser');
 
 app.post('/api/analyze', upload.single('vttFile'), (req, res) => {
     if (!req.file) {
