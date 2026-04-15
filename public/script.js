@@ -70,7 +70,8 @@ analyzeBtn.addEventListener('click', async () => {
         }
 
         if (isZip) {
-            const blob = await response.blob();
+            const data = await response.json();
+            const blob = new Blob([data.csv], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.style.display = 'none';
@@ -81,13 +82,16 @@ analyzeBtn.addEventListener('click', async () => {
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
             
-            // Show a simple success message for batch
-            const list = document.getElementById('participants-list');
-            list.innerHTML = `<div class="participant-card" style="grid-column: 1/-1; text-align: center;">
-                <span class="participant-name">Batch Analysis Complete!</span>
-                <span class="participant-count">Your CSV file has been downloaded.</span>
-            </div>`;
-            resultsSection.classList.remove('hidden');
+            // Display global statistics in the UI
+            displayResults(data.globalStats);
+            
+            // Add a notice that download finished
+            const notice = document.createElement('div');
+            notice.className = 'participant-card';
+            notice.style = 'grid-column: 1/-1; text-align: center; border-color: var(--primary);';
+            notice.innerHTML = `<span class="participant-name">Batch Analysis Complete!</span>
+                                <span class="participant-count">Your CSV file has been downloaded.</span>`;
+            document.getElementById('participants-list').prepend(notice);
         } else {
             const stats = await response.json();
             displayResults(stats);

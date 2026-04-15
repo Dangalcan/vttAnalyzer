@@ -42,10 +42,26 @@ export function analyzeZip(req, res) {
         const zipEntries = zip.getEntries();
         const results = [];
 
+        let totalDurationSeconds = 0;
+        let totalMessages = 0;
+        let participantMap = new Map();
+        let sumMeanResponseTime = 0;
+        let vttFileCount = 0;
+
         zipEntries.forEach(entry => {
             if (!entry.isDirectory && entry.entryName.toLowerCase().endsWith('.vtt')) {
                 const content = entry.getData().toString('utf-8');
                 const stats = AnalyzeService.analyzeContent(content);
+                
+                totalDurationSeconds += stats.durationSeconds;
+                totalMessages += stats.totalMessages;
+                sumMeanResponseTime += stats.meanResponseTimeSeconds;
+                vttFileCount++;
+
+                stats.participants.forEach(p => {
+                    participantMap.set(p.name, (participantMap.get(p.name) || 0) + p.count);
+                });
+
                 results.push({
                     filename: entry.name,
                     ...stats
@@ -56,6 +72,17 @@ export function analyzeZip(req, res) {
         if (results.length === 0) {
             return res.status(400).json({ error: 'No VTT files found in ZIP' });
         }
+
+        const globalStats = {
+            durationSeconds: Number(totalDurationSeconds.toFixed(3)),
+            durationMinutes: Number((totalDurationSeconds / 60).toFixed(2)),
+            meanResponseTimeSeconds: vttFileCount > 0 ? Number((sumMeanResponseTime / vttFileCount).toFixed(2)) : 0,
+            participantCount: participantMap.size,
+            totalMessages: totalMessages,
+            participants: Array.from(participantMap.entries())
+                .map(([name, count]) => ({ name, count }))
+                .sort((a, b) => b.count - a.count)
+        };
 
         // Generate CSV
         const headers = ['filename', 'durationSeconds', 'durationMinutes', 'meanResponseTimeSeconds', 'participantCount', 'totalMessages', 'participants'];
@@ -87,9 +114,11 @@ export function analyzeZip(req, res) {
 
         const csvString = csvLines.join('\n');
 
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', 'attachment; filename="analysis.csv"');
-        res.status(200).send(csvString);
+        // Return JSON containing both CSV and the global statistics
+        res.status(200).json({
+            csv: csvString,
+            globalStats
+        });
     } catch (err) {
         console.error('Error in analyzeZip controller:', err);
         res.status(500).json({ error: 'Failed to process ZIP file' });

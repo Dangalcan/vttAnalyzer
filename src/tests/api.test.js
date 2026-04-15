@@ -35,10 +35,12 @@ describe('VTT Analyzer API', () => {
                 .attach('vttFile', zipBuffer, 'batch.zip');
 
             expect(response.status).toBe(200);
-            expect(response.header['content-type']).toContain('text/csv');
-            expect(response.text).toContain('filename,durationSeconds');
-            expect(response.text).toContain('file1.vtt');
-            expect(response.text).toContain('file2.vtt');
+            expect(response.header['content-type']).toContain('application/json');
+            expect(response.body).toHaveProperty('csv');
+            expect(response.body).toHaveProperty('globalStats');
+            expect(response.body.csv).toContain('file1.vtt');
+            expect(response.body.csv).toContain('file2.vtt');
+            expect(response.body.globalStats.totalMessages).toBe(2);
         });
 
         it('should handle VTT files in subdirectories', async () => {
@@ -51,7 +53,7 @@ describe('VTT Analyzer API', () => {
                 .attach('vttFile', zipBuffer, 'batch.zip');
 
             expect(response.status).toBe(200);
-            expect(response.text).toContain('file3.vtt');
+            expect(response.body.csv).toContain('file3.vtt');
         });
 
         it('should return 400 if ZIP contains no VTT files', async () => {
