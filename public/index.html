@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="icon" type="image/png" href="icon.png">
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -25,7 +26,15 @@
                     <span class="drop-zone__prompt">Drop VTT or ZIP file here or click to upload</span>
                     <input type="file" name="vttFile" id="vtt-input" class="drop-zone__input" accept=".vtt,.zip">
                 </div>
+                <div class="filter-toggle">
+                    <label class="switch">
+                        <input type="checkbox" id="noise-filter-toggle" checked>
+                        <span class="slider round"></span>
+                    </label>
+                    <span class="toggle-label">Scientific Noise Reduction</span>
+                </div>
                 <button id="analyze-btn" class="btn-primary" disabled>Analyze Conversation</button>
+                <div id="error-message" class="error-toast hidden"></div>
             </section>
 
             <section id="results" class="results-section hidden">
@@ -40,23 +49,85 @@
                         <div class="stat-value" id="participant-count">0</div>
                     </div>
                     <div class="stat-card">
-                        <span class="stat-label">Total Messages</span>
+                        <span class="stat-label">Semantic Turns</span>
                         <div class="stat-value" id="total-messages">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Backchannels</span>
+                        <div class="stat-value" id="backchannel-count">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Interruptions</span>
+                        <div class="stat-value" id="interruption-count">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Speech Rate</span>
+                        <div class="stat-value"><span id="total-wpm">0</span></div>
+                        <div class="stat-sub">Words Per Minute</div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Equality Score</span>
+                        <div class="stat-value"><span id="equality-score">100</span>%</div>
+                        <div class="stat-sub">Participation Balance</div>
                     </div>
                     <div class="stat-card">
                         <span class="stat-label">Mean Response</span>
                         <div class="stat-value"><span id="mean-response-time">0</span>s</div>
                     </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Noise Ratio</span>
+                        <div class="stat-value"><span id="noise-ratio">0</span>%</div>
+                        <div class="stat-sub"><span id="noise-count">0</span> filtered cues</div>
+                    </div>
+                </div>
+
+                <div class="analysis-visuals" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                    <div class="chart-container">
+                        <h2>Participation Share</h2>
+                        <canvas id="participationChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h2>Noise Composition</h2>
+                        <canvas id="noiseChart"></canvas>
+                    </div>
                 </div>
 
                 <div class="participants-section">
-                    <h2>Participants Breakdown</h2>
+                    <header class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                        <h2>Analysis Results</h2>
+                        <button id="download-txt-btn" class="btn-secondary hidden" style="background: none; border: 1px solid var(--primary); color: var(--primary); padding: 8px 20px; border-radius: 8px; cursor: pointer; font-family: inherit; font-weight: 600;">Export Clean TXT</button>
+                    </header>
                     <div id="participants-list" class="participants-grid">
-                        <!-- Participant cards will be injected here -->
+                        <!-- File/Participant cards -->
                     </div>
                 </div>
             </section>
         </main>
+
+        <!-- Preview Modal -->
+        <div id="preview-modal" class="modal hidden">
+            <div class="modal-content">
+                <header class="modal-header">
+                    <div style="display: flex; gap: 15px; align-items: center;">
+                        <h2 id="modal-title">Transcript Preview</h2>
+                        <button id="modal-download-txt" class="btn-secondary" style="background: none; border: 1px solid var(--primary); color: var(--primary); padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">Download Clean TXT</button>
+                    </div>
+                    <button id="close-modal" class="close-btn">&times;</button>
+                </header>
+                <div class="modal-body">
+                    <div class="preview-split">
+                        <div class="preview-panel">
+                            <h3>Raw VTT Source</h3>
+                            <pre id="raw-preview"></pre>
+                        </div>
+                        <div class="preview-panel">
+                            <h3>Cleaned Semantic Turns</h3>
+                            <pre id="clean-preview"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <footer>
             <p>&copy; 2026 VTT Analyzer. Daniel Galván Cancio.</p>
