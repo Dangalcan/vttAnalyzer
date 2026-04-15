@@ -36,6 +36,30 @@ pues coménteme qué necesita o sobre qué</v>
     expect(stats.durationMinutes).toBe(0.09);
   });
 
+  it('should calculate mean response time correctly', () => {
+    const meanTimeVtt = `WEBVTT
+
+1
+00:00:00.000 --> 00:00:03.000
+<v User 1>Hello</v>
+
+2
+00:00:05.000 --> 00:00:11.000
+<v User 2>Hi there</v>
+
+3
+00:00:14.000 --> 00:00:16.000
+<v User 2>Are you there?</v>
+
+4
+00:00:17.000 --> 00:00:27.000
+<v User 1>Yes I am here</v>
+`;
+    const stats = parseVTT(meanTimeVtt);
+    expect(stats.durationSeconds).toBe(27);
+    expect(stats.meanResponseTimeSeconds).toBe(1.5);
+  });
+
   describe('calculateDuration', () => {
     it('should calculate duration between two timestamps', () => {
         expect(calculateDuration('00:00:03.186', '00:00:08.612')).toBe(5.426);

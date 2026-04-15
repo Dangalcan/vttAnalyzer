@@ -10,6 +10,7 @@ VTT Analyzer is a modern Web application designed to extract and visualize conve
   - Number of participants.
   - Total messages sent.
   - Message count breakdown per participant.
+  - Mean response time (seconds).
 - **Premium Design**: Modern dark theme with smooth animations and responsive layout.
 - **Robust Parsing**: Correctly handles overlapping cues and decodes HTML entities in participant names.
 - **Docker Ready**: Minimal image footprint using multi-stage Alpine builds.

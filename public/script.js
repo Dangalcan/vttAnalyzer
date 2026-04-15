@@ -79,6 +79,11 @@ function displayResults(stats) {
     document.getElementById('total-time-sec').textContent = stats.durationSeconds;
     document.getElementById('participant-count').textContent = stats.participantCount;
     document.getElementById('total-messages').textContent = stats.totalMessages;
+    
+    const mrtElem = document.getElementById('mean-response-time');
+    if (mrtElem) {
+        mrtElem.textContent = stats.meanResponseTimeSeconds !== undefined ? stats.meanResponseTimeSeconds : '0';
+    }
 
     const list = document.getElementById('participants-list');
     list.innerHTML = '';
