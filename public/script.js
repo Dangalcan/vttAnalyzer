@@ -141,6 +141,7 @@ analyzeBtn.addEventListener('click', async () => {
             document.body.removeChild(a);
             
             displayResults(data.globalStats);
+            displayGlobalStats(data.globalStats);
             
             const notice = document.createElement('div');
             notice.className = 'participant-card';
@@ -151,6 +152,8 @@ analyzeBtn.addEventListener('click', async () => {
         } else {
             const stats = await response.json();
             currentResults = [ { filename: selectedFile.name, ...stats } ];
+            // Hide global panel for single-file mode
+            document.getElementById('global-stats-panel').classList.add('hidden');
             displayResults(stats);
         }
     } catch (err) {
@@ -255,6 +258,29 @@ function displayResults(stats) {
     }
 
     resultsSection.scrollIntoView({ behavior: 'smooth' });
+}
+
+/**
+ * Populates and reveals the Global Statistics panel.
+ * Only shown after a batch (ZIP) analysis.
+ * @param {object} g - globalStats object from the server
+ */
+function displayGlobalStats(g) {
+    const panel = document.getElementById('global-stats-panel');
+    if (!panel || !g) return;
+
+    document.getElementById('g-duration-min').textContent  = g.durationMinutes  ?? '0';
+    document.getElementById('g-duration-sec').textContent  = g.durationSeconds  ?? '0';
+    document.getElementById('g-wpm').textContent           = g.wpm              ?? '0';
+    document.getElementById('g-response-time').textContent = g.meanResponseTimeSeconds ?? '0';
+    document.getElementById('g-messages').textContent      = g.totalMessages     ?? '0';
+    document.getElementById('g-words').textContent         = g.totalWords        ?? '0';
+    document.getElementById('g-noise-ratio').textContent   = g.noiseRatio        ?? '0';
+    document.getElementById('g-noise-count').textContent   = g.noiseMessagesCount ?? '0';
+    document.getElementById('g-interruptions').textContent = g.interruptionCount ?? '0';
+    document.getElementById('g-backchannels').textContent  = g.backchannelCount  ?? '0';
+
+    panel.classList.remove('hidden');
 }
 
 function renderParticipationChart(participants) {

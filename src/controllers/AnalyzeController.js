@@ -158,37 +158,70 @@ export function analyzeZip(req, res) {
             'noiseMessagesCount', 'backchannelCount', 'interruptionCount', 'noiseRatio',
             'participants',
         ];
-        const escapeCsv = (val) => {
+        // escapeCsvText: escapes text fields (strings) for semicolon-delimited CSV.
+        // Wraps in quotes if the value contains semicolons, quotes, or newlines.
+        const escapeCsvText = (val) => {
             if (val === undefined || val === null) return '';
             const str = String(val);
-            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+            if (str.includes(';') || str.includes('"') || str.includes('\n')) {
                 return `"${str.replace(/"/g, '""')}"`;
             }
             return str;
         };
 
-        const csvLines = [headers.join(',')];
+        // formatNum: converts numeric values to Spanish/EU locale format
+        // (decimal comma, no thousand separator) so LibreOffice and Google
+        // Sheets recognise them as numbers when using semicolon as delimiter.
+        const formatNum = (val) => {
+            if (val === undefined || val === null || val === '') return '';
+            const n = Number(val);
+            if (isNaN(n)) return String(val);
+            return String(n).replace('.', ',');
+        };
+
+        const csvLines = [headers.join(';')];
         results.forEach(item => {
             const participantsStr = item.participants
                 ? item.participants.map(p => `${p.name} (turns: ${p.count}, words: ${p.words})`).join('; ')
                 : '';
             const row = [
-                escapeCsv(item.filename),
-                escapeCsv(item.durationSeconds),
-                escapeCsv(item.durationMinutes),
-                escapeCsv(item.meanResponseTimeSeconds),
-                escapeCsv(item.participantCount),
-                escapeCsv(item.totalMessages),
-                escapeCsv(item.totalWords),
-                escapeCsv(item.wpm),
-                escapeCsv(item.noiseMessagesCount),
-                escapeCsv(item.backchannelCount),
-                escapeCsv(item.interruptionCount),
-                escapeCsv(item.noiseRatio),
-                escapeCsv(participantsStr),
+                escapeCsvText(item.filename),
+                formatNum(item.durationSeconds),
+                formatNum(item.durationMinutes),
+                formatNum(item.meanResponseTimeSeconds),
+                formatNum(item.participantCount),
+                formatNum(item.totalMessages),
+                formatNum(item.totalWords),
+                formatNum(item.wpm),
+                formatNum(item.noiseMessagesCount),
+                formatNum(item.backchannelCount),
+                formatNum(item.interruptionCount),
+                formatNum(item.noiseRatio),
+                escapeCsvText(participantsStr),
             ];
-            csvLines.push(row.join(','));
+            csvLines.push(row.join(';'));
         });
+
+        // Append a GLOBAL TOTAL summary row at the bottom of the CSV
+        const globalParticipantsStr = globalStats.participants
+            ? globalStats.participants.map(p => `${p.name} (turns: ${p.count}, words: ${p.words})`).join('; ')
+            : '';
+        const globalRow = [
+            escapeCsvText('GLOBAL TOTAL'),
+            formatNum(globalStats.durationSeconds),
+            formatNum(globalStats.durationMinutes),
+            formatNum(globalStats.meanResponseTimeSeconds),
+            formatNum(globalStats.participantCount),
+            formatNum(globalStats.totalMessages),
+            formatNum(globalStats.totalWords),
+            formatNum(globalStats.wpm),
+            formatNum(globalStats.noiseMessagesCount),
+            formatNum(globalStats.backchannelCount),
+            formatNum(globalStats.interruptionCount),
+            formatNum(globalStats.noiseRatio),
+            escapeCsvText(globalParticipantsStr),
+        ];
+        csvLines.push(globalRow.join(';'));
 
         res.status(200).json({
             csv: csvLines.join('\n'),
