@@ -67,6 +67,8 @@ export const NOISE_DEFAULTS = {
     logisticsWordLimit: 6,
     /** Alphanumeric character count below this is treated as a backchannel. */
     alnumMinLength: 3,
+    /** Speaker-turn gaps larger than this (seconds) are excluded from response-time calc. */
+    maxResponseGapSeconds: 30,
 };
 
 /**

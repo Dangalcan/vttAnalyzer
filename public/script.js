@@ -107,9 +107,11 @@ analyzeBtn.addEventListener('click', async () => {
     analyzeBtn.textContent = 'Analyzing...';
 
     const filterNoise = document.getElementById('noise-filter-toggle').checked;
+    const maxResponseGapSeconds = document.getElementById('max-response-gap').value;
     const formData = new FormData();
     formData.append('vttFile', selectedFile);
     formData.append('filterNoise', filterNoise);
+    formData.append('maxResponseGapSeconds', maxResponseGapSeconds);
 
     const isZip = selectedFile.name.toLowerCase().endsWith('.zip');
     const endpoint = isZip ? '/api/analyze-zip' : '/api/analyze';

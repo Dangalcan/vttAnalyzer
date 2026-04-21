@@ -115,6 +115,7 @@ function parseVTT(content, options = { filterNoise: true }) {
 
     // Merge shadow cues (same speaker, gap < mergeGapThreshold)
     const mergeGapThreshold = options.mergeGapThreshold ?? NOISE_DEFAULTS.mergeGapThreshold;
+    const maxResponseGapSeconds = options.maxResponseGapSeconds ?? NOISE_DEFAULTS.maxResponseGapSeconds;
     const mergedCues = [];
     if (rawCues.length > 0) {
         let activeCue = JSON.parse(JSON.stringify(rawCues[0]));
@@ -171,7 +172,7 @@ function parseVTT(content, options = { filterNoise: true }) {
             if (previousSpeaker !== pName) {
                 if (cue.startSec < previousSpeakerEnd - 0.5) interruptionCount++;
                 const gap = cue.startSec - previousSpeakerEnd;
-                if (gap <= 300) responseTimes.push(Math.max(0, gap));
+                if (gap <= maxResponseGapSeconds) responseTimes.push(Math.max(0, gap));
             }
         }
         previousSpeaker = pName;

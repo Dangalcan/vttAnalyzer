@@ -17,7 +17,10 @@ export function analyzeVTT(req, res) {
     try {
         const content = req.file.buffer.toString('utf-8');
         const filterNoise = req.body.filterNoise === 'true';
-        const stats = AnalyzeService.analyzeContent(content, { filterNoise });
+        const maxResponseGapSeconds = req.body.maxResponseGapSeconds !== undefined
+            ? Number(req.body.maxResponseGapSeconds)
+            : undefined;
+        const stats = AnalyzeService.analyzeContent(content, { filterNoise, maxResponseGapSeconds });
 
         res.status(200).json(stats);
     } catch (err) {
@@ -50,6 +53,9 @@ export function analyzeZip(req, res) {
 
     try {
         const filterNoise = req.body.filterNoise === 'true';
+        const maxResponseGapSeconds = req.body.maxResponseGapSeconds !== undefined
+            ? Number(req.body.maxResponseGapSeconds)
+            : undefined;
         const zip = new AdmZip(req.file.buffer);
         const zipEntries = zip.getEntries();
         const results = [];
@@ -73,7 +79,7 @@ export function analyzeZip(req, res) {
         zipEntries.forEach(entry => {
             if (!entry.isDirectory && entry.entryName.toLowerCase().endsWith('.vtt')) {
                 const content = entry.getData().toString('utf-8');
-                const stats = AnalyzeService.analyzeContent(content, { filterNoise });
+                const stats = AnalyzeService.analyzeContent(content, { filterNoise, maxResponseGapSeconds });
 
                 totalDurationSeconds      += stats.durationSeconds;
                 totalSpeakingSeconds      += stats.speakingSeconds || 0;
